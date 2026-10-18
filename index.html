@@ -24,8 +24,56 @@
       margin-bottom: 10px;
     }
 
+    .bingo-board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      width: 100%;
+      max-width: 850px;
+      margin: 25px auto 0;
+    }
+
+    .bingo-cell {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 1 / 1;
+      min-width: 0;
+      overflow: hidden;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 4px;
+      transition: background-color 0.2s;
+    }
+
+    .bingo-cell img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+    }
+
+    /* Thick, hollow red completion circle */
+    .bingo-cell.completed::after {
+      content: "";
+      position: absolute;
+      width: 72%;
+      height: 72%;
+      border: 9px solid red;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .bingo-cell.completed {
+      border-color: red;
+    }
+
     #randomizeBtn {
-      margin: 15px 0 25px;
+      display: block;
+      margin: 24px auto;
       padding: 12px 24px;
       border: none;
       border-radius: 8px;
@@ -38,53 +86,6 @@
 
     #randomizeBtn:hover {
       background: #444;
-    }
-
-    .bingo-board {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 8px;
-      width: 100%;
-      max-width: 850px;
-      margin: 0 auto;
-    }
-
-    .bingo-cell {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      aspect-ratio: 1 / 1;
-      min-width: 0;
-      overflow: hidden;
-      background: white;
-      border: 2px solid #ccc;
-      border-radius: 8px;
-      cursor: pointer;
-      padding: 4px;
-    }
-
-    .bingo-cell img {
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      pointer-events: none;
-    }
-
-    /* Large red O for completed images */
-.bingo-cell.completed::after {
-  content: "";
-  position: absolute;
-  width: 72%;
-  height: 72%;
-  border: 9px solid red;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-    .bingo-cell.completed {
-      border-color: red;
     }
 
     @media (max-width: 500px) {
@@ -100,6 +101,10 @@
         padding: 2px;
         border-radius: 4px;
       }
+
+      .bingo-cell.completed::after {
+        border-width: 5px;
+      }
     }
   </style>
 </head>
@@ -108,11 +113,11 @@
   <h1>Bingo Randomizer</h1>
   <p>Click an image to mark it complete!</p>
 
-<div id="bingoBoard" class="bingo-board"></div>
+  <div id="bingoBoard" class="bingo-board"></div>
 
-<button id="randomizeBtn" type="button">
-  Randomize Board
-</button>
+  <button id="randomizeBtn" type="button">
+    Randomize Board
+  </button>
 
   <script>
     // Replace these paths with your 25 image sources.
@@ -143,34 +148,33 @@
       "images/image24.png",
       "images/image25.png"
     ];
-    
+
+    // Light pastel color palette.
     const pastelColors = [
-  "#FFDDE2", // Soft pink
-  "#D9EAFD", // Baby blue
-  "#DDF5E3", // Mint green
-  "#FFF0CC", // Soft yellow
-  "#E8DEFF", // Lavender
-  "#FFE2CC", // Peach
-  "#D9F3F0", // Aqua
-  "#F8DDF0", // Light pink
-  "#E7F0D5", // Pale green
-  "#F3E5D5"  // Cream
-];
+      "#FFDDE2", // Soft pink
+      "#D9EAFD", // Baby blue
+      "#DDF5E3", // Mint green
+      "#FFF0CC", // Soft yellow
+      "#E8DEFF", // Lavender
+      "#FFE2CC", // Peach
+      "#D9F3F0", // Aqua
+      "#F8DDF0", // Light pink
+      "#E7F0D5", // Pale green
+      "#F3E5D5"  // Cream
+    ];
 
     const board = document.getElementById("bingoBoard");
     const randomizeBtn = document.getElementById("randomizeBtn");
 
     // Each image keeps its own completion state.
-let bingoItems = imageSources.map((src, index) => ({
-  id: index,
-  src: src,
-  completed: false,
-  color: pastelColors[
-    Math.floor(Math.random() * pastelColors.length)
-  ]
-}));
+    let bingoItems = imageSources.map((src, index) => ({
+      id: index,
+      src: src,
+      completed: false,
+      color: null
+    }));
 
-    // Fisher-Yates shuffle for a fair random order.
+    // Fisher-Yates shuffle.
     function shuffle(array) {
       const shuffled = [...array];
 
@@ -184,13 +188,51 @@ let bingoItems = imageSources.map((src, index) => ({
       return shuffled;
     }
 
-    // Draw the board using the current image order.
+    // Generate colors with no matching horizontal
+    // or vertical neighbors.
+    function generatePastelColors() {
+      const colors = [];
+
+      for (let i = 0; i < 25; i++) {
+        const row = Math.floor(i / 5);
+        const col = i % 5;
+
+        const forbidden = new Set();
+
+        // Check the cell to the left.
+        if (col > 0) {
+          forbidden.add(colors[i - 1]);
+        }
+
+        // Check the cell above.
+        if (row > 0) {
+          forbidden.add(colors[i - 5]);
+        }
+
+        const available = pastelColors.filter(
+          color => !forbidden.has(color)
+        );
+
+        const chosenColor =
+          available[
+            Math.floor(Math.random() * available.length)
+          ];
+
+        colors.push(chosenColor);
+      }
+
+      return colors;
+    }
+
+    // Render all 25 cells.
     function renderBoard() {
       board.innerHTML = "";
 
       bingoItems.forEach((item) => {
         const cell = document.createElement("div");
         cell.className = "bingo-cell";
+
+        // Apply the pastel color for this grid position.
         cell.style.backgroundColor = item.color;
 
         if (item.completed) {
@@ -215,7 +257,7 @@ let bingoItems = imageSources.map((src, index) => ({
         img.alt = `Bingo item ${item.id + 1}`;
         img.draggable = false;
 
-        // Toggle the red X on and off.
+        // Toggle the red circle on and off.
         function toggleCompleted() {
           item.completed = !item.completed;
           renderBoard();
@@ -235,15 +277,26 @@ let bingoItems = imageSources.map((src, index) => ({
       });
     }
 
-    // Shuffle images without losing completion states.
-    randomizeBtn.addEventListener("click", () => {
+    // Shuffle images and create a new pastel layout.
+    function randomizeBoard() {
       bingoItems = shuffle(bingoItems);
-      renderBoard();
-    });
 
-// Shuffle the board when the page first loads.
-bingoItems = shuffle(bingoItems);
-renderBoard();
+      const colors = generatePastelColors();
+
+      // Colors belong to positions, while completion
+      // states belong to images.
+      bingoItems.forEach((item, index) => {
+        item.color = colors[index];
+      });
+
+      renderBoard();
+    }
+
+    // Randomize on initial page load.
+    randomizeBoard();
+
+    // Randomize whenever the button is clicked.
+    randomizeBtn.addEventListener("click", randomizeBoard);
   </script>
 </body>
 </html>
