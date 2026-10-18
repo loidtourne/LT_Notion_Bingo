@@ -11,26 +11,30 @@
       box-sizing: border-box;
     }
 
+    html,
     body {
       margin: 0;
+      min-height: 100%;
+      background: #191919;
+    }
+
+    body {
       padding: 24px;
+      color: #e6e6e6;
       font-family: Arial, sans-serif;
-  background: #191919;
-  color: #e6e6e6;
-      text-align: center;
     }
 
     h1 {
-      margin-bottom: 10px;
+      margin: 0;
+      text-align: center;
+      font-size: 28px;
     }
 
-    .bingo-banner {
-  display: block;
-  width: 100%;
-  max-width: 850px;
-  height: auto;
-  margin: 0 auto;
-}
+    p {
+      margin: 12px 0 0;
+      text-align: center;
+      color: #cccccc;
+    }
 
     .bingo-board {
       display: grid;
@@ -46,14 +50,18 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      aspect-ratio: 1 / 1;
       min-width: 0;
+      aspect-ratio: 1 / 1;
       overflow: hidden;
-      border: 2px solid #ccc;
+      padding: 5px;
+      border: 2px solid #555555;
       border-radius: 8px;
       cursor: pointer;
-      padding: 4px;
-      transition: background-color 0.2s;
+      transition: transform 0.15s ease;
+    }
+
+    .bingo-cell:hover {
+      transform: scale(1.025);
     }
 
     .bingo-cell img {
@@ -64,19 +72,14 @@
       pointer-events: none;
     }
 
-    /* Thick, hollow red completion circle */
     .bingo-cell.completed::after {
       content: "";
       position: absolute;
-      width: 72%;
-      height: 72%;
+      width: 48%;
+      height: 48%;
       border: 9px solid red;
       border-radius: 50%;
       pointer-events: none;
-    }
-
-    .bingo-cell.completed {
-      border-color: red;
     }
 
     #randomizeBtn {
@@ -85,54 +88,77 @@
       padding: 12px 24px;
       border: none;
       border-radius: 8px;
-      background: #222;
-      color: white;
+      background: #e6e6e6;
+      color: #191919;
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
     }
 
     #randomizeBtn:hover {
-      background: #444;
+      background: #cccccc;
     }
 
-    @media (max-width: 500px) {
+    #randomizeBtn:focus-visible,
+    .bingo-cell:focus-visible {
+      outline: 3px solid #75baff;
+      outline-offset: 3px;
+    }
+
+    @media (max-width: 600px) {
       body {
         padding: 10px;
       }
 
+      h1 {
+        font-size: 23px;
+      }
+
       .bingo-board {
         gap: 4px;
+        margin-top: 20px;
       }
 
       .bingo-cell {
-        padding: 2px;
-        border-radius: 4px;
+        padding: 3px;
+        border-width: 1px;
+        border-radius: 5px;
       }
 
       .bingo-cell.completed::after {
         border-width: 5px;
+      }
+
+      #randomizeBtn {
+        margin: 20px auto;
       }
     }
   </style>
 </head>
 
 <body>
-    <img
-  class="bingo-banner"
-  src="https://github.com/loidtourne/LT_Notion_Bingo/blob/main/images/banner2.png?raw=true"
-  alt="Bingo Banner"
-/>
-  <div id="bingoBoard" class="bingo-board"></div>
+
+  <h1>Bingo Randomizer</h1>
+  <p>Click an image to mark it complete!</p>
+
+  <div
+    id="bingoBoard"
+    class="bingo-board"
+    aria-label="Bingo board"
+  ></div>
 
   <button id="randomizeBtn" type="button">
     Randomize Board
   </button>
 
   <script>
-    // Replace these paths with your 25 image sources.
+    // ==========================================
+    // 1. IMAGE SOURCES
+    // Replace these 25 URLs with your own images.
+    // ==========================================
+
     const imageSources = [
-      "images/image1.png",
+ "images/image1.png",
       "images/image2.png",
       "images/image3.png",
       "images/image4.png",
@@ -159,47 +185,54 @@
       "images/image25.png"
     ];
 
-    // Light pastel color palette.
+    // ==========================================
+    // 2. SETTINGS AND INITIAL DATA
+    // ==========================================
+
+    const STORAGE_KEY = "bingoRandomizerState";
+
     const pastelColors = [
-      "#FFDDE2", // Soft pink
-      "#D9EAFD", // Baby blue
-      "#DDF5E3", // Mint green
-      "#FFF0CC", // Soft yellow
-      "#E8DEFF", // Lavender
-      "#FFE2CC", // Peach
-      "#D9F3F0", // Aqua
-      "#F8DDF0", // Light pink
-      "#E7F0D5", // Pale green
-      "#F3E5D5"  // Cream
+      "#FFD6D6",
+      "#FFE5B4",
+      "#FFF2B2",
+      "#D9F2D9",
+      "#CDEFEA",
+      "#D6E6FF",
+      "#DDD6FF",
+      "#F0D6FF",
+      "#FFD6EA",
+      "#E8E8E8"
     ];
 
-    const board = document.getElementById("bingoBoard");
-    const randomizeBtn = document.getElementById("randomizeBtn");
-
-    // Each image keeps its own completion state.
     let bingoItems = imageSources.map((src, index) => ({
       id: index,
-      src: src,
+      src,
       completed: false,
       color: null
     }));
 
-    // Fisher-Yates shuffle.
-    function shuffle(array) {
-      const shuffled = [...array];
+    const bingoBoard = document.getElementById("bingoBoard");
+    const randomizeBtn = document.getElementById("randomizeBtn");
 
-      for (let i = shuffled.length - 1; i > 0; i--) {
+    // ==========================================
+    // 3. SHUFFLE THE BOARD
+    // ==========================================
+
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
 
-        [shuffled[i], shuffled[j]] =
-          [shuffled[j], shuffled[i]];
+        [array[i], array[j]] = [array[j], array[i]];
       }
 
-      return shuffled;
+      return array;
     }
 
-    // Generate colors with no matching horizontal
-    // or vertical neighbors.
+    // ==========================================
+    // 4. GENERATE COLORS
+    // No matching colors horizontally or vertically.
+    // ==========================================
+
     function generatePastelColors() {
       const colors = [];
 
@@ -207,75 +240,150 @@
         const row = Math.floor(i / 5);
         const col = i % 5;
 
-        const forbidden = new Set();
+        const forbidden = [];
 
-        // Check the cell to the left.
+        // Color immediately to the left.
         if (col > 0) {
-          forbidden.add(colors[i - 1]);
+          forbidden.push(colors[i - 1]);
         }
 
-        // Check the cell above.
+        // Color immediately above.
         if (row > 0) {
-          forbidden.add(colors[i - 5]);
+          forbidden.push(colors[i - 5]);
         }
 
         const available = pastelColors.filter(
-          color => !forbidden.has(color)
+          color => !forbidden.includes(color)
         );
 
-        const chosenColor =
-          available[
-            Math.floor(Math.random() * available.length)
-          ];
+        const chosen =
+          available[Math.floor(Math.random() * available.length)];
 
-        colors.push(chosenColor);
+        colors.push(chosen);
       }
 
       return colors;
     }
 
-    // Render all 25 cells.
+    // ==========================================
+    // 5. SAVE THE CURRENT BOARD
+    // Saves order, completion, colors, and image URLs.
+    // ==========================================
+
+    function saveBoard() {
+      try {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(bingoItems)
+        );
+      } catch (error) {
+        console.warn("Unable to save Bingo board:", error);
+      }
+    }
+
+    // ==========================================
+    // 6. RESTORE THE PREVIOUS BOARD
+    // ==========================================
+
+    function loadBoard() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+
+        if (!saved) return false;
+
+        const parsed = JSON.parse(saved);
+
+        // Validate the saved board before restoring it.
+        if (
+          !Array.isArray(parsed) ||
+          parsed.length !== imageSources.length
+        ) {
+          return false;
+        }
+
+        const validIds = new Set(
+          imageSources.map((_, index) => index)
+        );
+
+        const savedIds = new Set(parsed.map(item => item.id));
+
+        if (
+          savedIds.size !== imageSources.length ||
+          parsed.some(item => !validIds.has(item.id)) ||
+          parsed.some(item =>
+            typeof item.src !== "string" ||
+            typeof item.completed !== "boolean" ||
+            !pastelColors.includes(item.color)
+          )
+        ) {
+          return false;
+        }
+
+        // Restore the saved order and status.
+        bingoItems = parsed.map(item => ({
+          id: item.id,
+          src: imageSources[item.id],
+          completed: item.completed,
+          color: item.color
+        }));
+
+        return true;
+      } catch (error) {
+        console.warn("Unable to restore Bingo board:", error);
+        return false;
+      }
+    }
+
+    // ==========================================
+    // 7. DRAW THE BOARD
+    // ==========================================
+
     function renderBoard() {
-      board.innerHTML = "";
+      bingoBoard.innerHTML = "";
 
-      bingoItems.forEach((item) => {
+      bingoItems.forEach(item => {
         const cell = document.createElement("div");
-        cell.className = "bingo-cell";
 
-        // Apply the pastel color for this grid position.
-        cell.style.backgroundColor = item.color;
+        cell.className = "bingo-cell";
 
         if (item.completed) {
           cell.classList.add("completed");
         }
 
+        cell.style.backgroundColor = item.color;
+        cell.tabIndex = 0;
         cell.setAttribute("role", "button");
-        cell.setAttribute("tabindex", "0");
+
         cell.setAttribute(
           "aria-label",
-          item.completed
-            ? "Completed. Click to unmark."
-            : "Not completed. Click to mark."
+          `Bingo item ${item.id + 1}, ${
+            item.completed ? "completed" : "not completed"
+          }`
         );
+
         cell.setAttribute(
           "aria-pressed",
           String(item.completed)
         );
 
         const img = document.createElement("img");
+
         img.src = item.src;
         img.alt = `Bingo item ${item.id + 1}`;
+        img.loading = "lazy";
         img.draggable = false;
 
-        // Toggle the red circle on and off.
+        // Toggle completion and save immediately.
         function toggleCompleted() {
           item.completed = !item.completed;
+
+          saveBoard();
           renderBoard();
         }
 
         cell.addEventListener("click", toggleCompleted);
 
-        cell.addEventListener("keydown", (event) => {
+        cell.addEventListener("keydown", event => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
             toggleCompleted();
@@ -283,32 +391,50 @@
         });
 
         cell.appendChild(img);
-        board.appendChild(cell);
+        bingoBoard.appendChild(cell);
       });
     }
 
-    // Shuffle images and create a new pastel layout.
-  function randomizeBoard() {
-    bingoItems.forEach(item => {
-      item.completed = false;
-    });
+    // ==========================================
+    // 8. RANDOMIZE AND RESET
+    // ==========================================
 
-    shuffleArray(bingoItems);
+    function randomizeBoard() {
+      // Clear all completed circles.
+      bingoItems.forEach(item => {
+        item.completed = false;
+      });
 
-    const colors = generatePastelColors();
+      // Shuffle the images.
+      shuffleArray(bingoItems);
 
-    bingoItems.forEach((item, index) => {
-      item.color = colors[index];
-    });
+      // Generate a new color layout.
+      const colors = generatePastelColors();
 
-    renderBoard();
-  }
+      // Assign colors to the shuffled positions.
+      bingoItems.forEach((item, index) => {
+        item.color = colors[index];
+      });
 
-    // Randomize on initial page load.
-    randomizeBoard();
+      // Save the new board before displaying it.
+      saveBoard();
 
-    // Randomize whenever the button is clicked.
+      renderBoard();
+    }
+
+    // ==========================================
+    // 9. STARTUP
+    // Restore the saved board instead of reshuffling.
+    // ==========================================
+
+    if (loadBoard()) {
+      renderBoard();
+    } else {
+      randomizeBoard();
+    }
+
     randomizeBtn.addEventListener("click", randomizeBoard);
   </script>
+
 </body>
 </html>
