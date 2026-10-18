@@ -73,7 +73,6 @@
     }
 
     /* Large red O for completed images */
-
 .bingo-cell.completed::after {
   content: "";
   position: absolute;
@@ -84,10 +83,9 @@
   pointer-events: none;
 }
 
-
-.bingo-cell.completed {
-  border-color: red;
-}
+    .bingo-cell.completed {
+      border-color: red;
+    }
 
     @media (max-width: 500px) {
       body {
@@ -113,6 +111,7 @@
   <button id="randomizeBtn" type="button">
     Randomize Board
   </button>
+
   <div id="bingoBoard" class="bingo-board"></div>
 
   <script>
