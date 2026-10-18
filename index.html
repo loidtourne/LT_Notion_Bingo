@@ -108,11 +108,11 @@
   <h1>Bingo Randomizer</h1>
   <p>Click an image to mark it complete!</p>
 
-  <button id="randomizeBtn" type="button">
-    Randomize Board
-  </button>
+<div id="bingoBoard" class="bingo-board"></div>
 
-  <div id="bingoBoard" class="bingo-board"></div>
+<button id="randomizeBtn" type="button">
+  Randomize Board
+</button>
 
   <script>
     // Replace these paths with your 25 image sources.
@@ -224,8 +224,9 @@
       renderBoard();
     });
 
-    // Generate the initial board.
-    renderBoard();
+// Shuffle the board when the page first loads.
+bingoItems = shuffle(bingoItems);
+renderBoard();
   </script>
 </body>
 </html>
