@@ -288,19 +288,21 @@
     }
 
     // Shuffle images and create a new pastel layout.
-    function randomizeBoard() {
-      bingoItems = shuffle(bingoItems);
+  function randomizeBoard() {
+    bingoItems.forEach(item => {
+      item.completed = false;
+    });
 
-      const colors = generatePastelColors();
+    shuffleArray(bingoItems);
 
-      // Colors belong to positions, while completion
-      // states belong to images.
-      bingoItems.forEach((item, index) => {
-        item.color = colors[index];
-      });
+    const colors = generatePastelColors();
 
-      renderBoard();
-    }
+    bingoItems.forEach((item, index) => {
+      item.color = colors[index];
+    });
+
+    renderBoard();
+  }
 
     // Randomize on initial page load.
     randomizeBoard();
