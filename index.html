@@ -143,16 +143,32 @@
       "images/image24.png",
       "images/image25.png"
     ];
+    
+    const pastelColors = [
+  "#FFDDE2", // Soft pink
+  "#D9EAFD", // Baby blue
+  "#DDF5E3", // Mint green
+  "#FFF0CC", // Soft yellow
+  "#E8DEFF", // Lavender
+  "#FFE2CC", // Peach
+  "#D9F3F0", // Aqua
+  "#F8DDF0", // Light pink
+  "#E7F0D5", // Pale green
+  "#F3E5D5"  // Cream
+];
 
     const board = document.getElementById("bingoBoard");
     const randomizeBtn = document.getElementById("randomizeBtn");
 
     // Each image keeps its own completion state.
-    let bingoItems = imageSources.map((src, index) => ({
-      id: index,
-      src: src,
-      completed: false
-    }));
+let bingoItems = imageSources.map((src, index) => ({
+  id: index,
+  src: src,
+  completed: false,
+  color: pastelColors[
+    Math.floor(Math.random() * pastelColors.length)
+  ]
+}));
 
     // Fisher-Yates shuffle for a fair random order.
     function shuffle(array) {
@@ -175,6 +191,7 @@
       bingoItems.forEach((item) => {
         const cell = document.createElement("div");
         cell.className = "bingo-cell";
+        cell.style.backgroundColor = item.color;
 
         if (item.completed) {
           cell.classList.add("completed");
